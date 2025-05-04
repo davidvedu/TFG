@@ -1,0 +1,93 @@
+[
+  {
+    "id": 1,
+    "marca": "Toyota",
+    "modelo": "Corolla",
+    "año": 2020,
+    "precio": 15000,
+    "combustible": "Gasolina",
+    "transmision": "Manual",
+    "kilometros": 40000,
+    "color": "Blanco",
+    "imagen": "https://cdn.pixabay.com/photo/2012/05/29/00/43/car-49278_960_720.jpg",
+    "descripcion": "Toyota Corolla eficiente y económico, ideal para ciudad."
+  },
+  {
+    "id": 2,
+    "marca": "Volkswagen",
+    "modelo": "Golf",
+    "año": 2019,
+    "precio": 13500,
+    "combustible": "Diesel",
+    "transmision": "Automática",
+    "kilometros": 60000,
+    "color": "Gris",
+    "imagen": "https://cdn.pixabay.com/photo/2017/01/06/19/15/volkswagen-1957037_960_720.jpg",
+    "descripcion": "Golf cómodo y espacioso, ideal para viajes largos."
+  },
+  {
+    "id": 3,
+    "marca": "Ford",
+    "modelo": "Focus",
+    "año": 2021,
+    "precio": 17000,
+    "combustible": "Gasolina",
+    "transmision": "Manual",
+    "kilometros": 25000,
+    "color": "Rojo",
+    "imagen": "https://cdn.pixabay.com/photo/2020/02/01/07/59/ford-4811600_960_720.jpg",
+    "descripcion": "Ford Focus moderno con excelente equipamiento tecnológico."
+  },
+  {
+    "id": 4,
+    "marca": "BMW",
+    "modelo": "Serie 3",
+    "año": 2018,
+    "precio": 22000,
+    "combustible": "Diesel",
+    "transmision": "Automática",
+    "kilometros": 80000,
+    "color": "Negro",
+    "imagen": "https://cdn.pixabay.com/photo/2017/03/27/14/56/bmw-2179220_960_720.jpg",
+    "descripcion": "BMW con potencia y diseño premium."
+  },
+  {
+    "id": 5,
+    "marca": "Tesla",
+    "modelo": "Model 3",
+    "año": 2022,
+    "precio": 35000,
+    "combustible": "Eléctrico",
+    "transmision": "Automática",
+    "kilometros": 10000,
+    "color": "Azul",
+    "imagen": "https://cdn.pixabay.com/photo/2020/06/04/09/26/tesla-5255584_960_720.jpg",
+    "descripcion": "Tesla Model 3 eléctrico, conducción autónoma y alta eficiencia."
+  },
+  {
+    "id": 6,
+    "marca": "Renault",
+    "modelo": "Clio",
+    "año": 2017,
+    "precio": 8500,
+    "combustible": "Gasolina",
+    "transmision": "Manual",
+    "kilometros": 90000,
+    "color": "Plateado",
+    "imagen": "https://cdn.pixabay.com/photo/2016/10/01/19/20/car-1705423_960_720.jpg",
+    "descripcion": "Renault Clio compacto, económico y funcional."
+  },
+  {
+    "id": 7,
+    "marca": "Audi",
+    "modelo": "A3",
+    "año": 2020,
+    "precio": 24000,
+    "combustible": "Gasolina",
+    "transmision": "Automática",
+    "kilometros": 30000,
+    "color": "Negro",
+    "imagen": "https://cdn.pixabay.com/photo/2020/10/19/17/56/audi-5668281_960_720.jpg",
+    "descripcion": "Audi A3 deportivo y elegante con gran rendimiento."
+  }
+]
