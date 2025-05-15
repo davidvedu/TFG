@@ -17,7 +17,7 @@ const Marca = sequelize.define('Marca', {
         allowNull: false
     }
 }, {
-    tableName: 'Marca',
+    tableName: 'Marcas',
     timestamps: true
 });
 

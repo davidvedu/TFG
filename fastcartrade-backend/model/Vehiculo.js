@@ -1,6 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+
 const Modelo = require('./Modelo');
+const Anuncio = require('./Anuncio');
 
 const Vehiculo = sequelize.define('Vehiculo', {
     matricula: {
@@ -35,7 +37,7 @@ const Vehiculo = sequelize.define('Vehiculo', {
             min: 0
         }
     },
-    tipo_combustible: {
+    combustible: {
         type: DataTypes.ENUM('gasolina', 'diésel', 'eléctrico', 'híbrido', 'GLP', 'hidrógeno', 'otros'),
         allowNull: false
     },
@@ -98,7 +100,10 @@ const Vehiculo = sequelize.define('Vehiculo', {
     timestamps: true
 });
 
+// Relaciones
 Vehiculo.belongsTo(Modelo, { foreignKey: 'modelo_id' });
-Modelo.hasMany(Vehiculo, { foreignKey: 'modelo_id' });
+Modelo.hasMany(Vehiculo, { foreignKey: 'modelo_id'});
+
 
 module.exports = Vehiculo;
+

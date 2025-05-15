@@ -1,6 +1,11 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
+const Comentario = require('./Comentario');
+const Usuario = require('./Usuario');
+const Vehiculo = require('./Vehiculo');
+
+
 const Anuncio = sequelize.define('Anuncio', {
     id: {
         type: DataTypes.INTEGER,
@@ -50,6 +55,22 @@ const Anuncio = sequelize.define('Anuncio', {
         type: DataTypes.ENUM('activo', 'inactivo', 'vendido'),
         defaultValue: 'activo',
         allowNull: false
+    },
+    imagen_principal: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'assets/default-car.jpg'
+    },
+    imagenes_adicionales: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        get() {
+            const value = this.getDataValue('imagenes_adicionales');
+            return value ? JSON.parse(value) : [];
+        },
+        set(value) {
+            this.setDataValue('imagenes_adicionales', JSON.stringify(value));
+        }
     }
 }, {
     tableName: 'Anuncio',
@@ -58,6 +79,29 @@ const Anuncio = sequelize.define('Anuncio', {
     updatedAt: 'fecha_actualizacion'
 });
 
+// Relaciones
+Anuncio.belongsTo(Usuario, {
+    foreignKey: 'vendedor_id',
+    as: 'vendedor'
+});
+
+Anuncio.hasMany(Comentario, {
+    foreignKey: 'anuncio_id',
+    as: 'comentarios'
+});
+
+// Anuncio pertenece a un Vehiculo por la matrícula
+Anuncio.belongsTo(Vehiculo, {
+  foreignKey: 'matricula',
+  targetKey: 'matricula',
+  as: 'vehiculo'
+});
+
+Vehiculo.hasOne(Anuncio, {
+  foreignKey: 'matricula',
+  sourceKey: 'matricula',
+  as: 'anuncio'
+});
 
 
 module.exports = Anuncio;

@@ -1,112 +1,259 @@
-// controllers/favoritosController.js
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
-const Usuario = require('../model/Usuario');
-const Anuncio = require('../model/Anuncio');
 const Favorito = require('../model/Favorito');
+const Anuncio = require('../model/Anuncio');
+const Vehiculo = require('../model/Vehiculo');
+const Usuario = require('../model/Usuario');
+const Modelo = require('../model/Modelo');
+const Marca = require('../model/Marca');
+const { Op } = require('sequelize');
 
 module.exports = {
+  // Obtener todos los favoritos del usuario autenticado
+  obtenerFavoritos: async (req, res) => {
+    try {
+      const { id: usuarioId } = req.usuario;
+      
+      console.log('Obteniendo favoritos para el usuario:', usuarioId);
+      
+      // Buscar todos los favoritos del usuario
+      const favoritos = await Favorito.findAll({
+        where: { usuario_id: usuarioId },
+        include: [{
+          model: Anuncio,
+          as: 'anuncio',
+          include: [{
+            model: Vehiculo,
+            as: 'vehiculo'
+          }]
+        }]
+      });
+      
+      // Mapear los IDs de anuncios para el frontend
+      const favoritosSimples = favoritos.map(fav => ({
+        id: fav.id,
+        anuncio_id: fav.anuncio_id,
+        usuario_id: fav.usuario_id,
+        fecha_agregado: fav.fecha_agregado
+      }));
+      
+      res.json(favoritosSimples);
+    } catch (error) {
+      console.error('Error al obtener favoritos:', error);
+      res.status(500).json({ error: 'Error al obtener los favoritos' });
+    }
+  },
+  
   // Agregar un anuncio a favoritos
   agregarFavorito: async (req, res) => {
     try {
-      const { id } = req.params;
-      const usuarioId = req.user.id;
+      const { anuncioId } = req.params;
+      const { id: usuarioId } = req.usuario;
+      
+      console.log(`Agregando anuncio ${anuncioId} a favoritos del usuario ${usuarioId}`);
 
-      // Verificar que el anuncio existe
-      const anuncio = await Anuncio.findByPk(id, { transaction: t });
+      // Verificar si el anuncio existe
+      const anuncio = await Anuncio.findByPk(anuncioId);
       if (!anuncio) {
         return res.status(404).json({ error: 'Anuncio no encontrado' });
       }
 
-      // Verificar que el usuario no es el vendedor
-      if (anuncio.vendedor_id === usuarioId) {
-        return res.status(400).json({ error: 'No puedes agregar tu propio anuncio a favoritos' });
-      }
-
-      // Verificar que no está ya en favoritos
-      const favoritoExistente = await Favorito.findOne({
-        where: {
-          usuario_id: usuarioId,
-          anuncio_id: id
-        },
-        transaction: t
+      // Verificar si ya es favorito
+      const existente = await Favorito.findOne({
+        where: { 
+          usuario_id: usuarioId, 
+          anuncio_id: anuncioId 
+        }
       });
 
-      if (favoritoExistente) {
+      if (existente) {
         return res.status(400).json({ error: 'Este anuncio ya está en tus favoritos' });
       }
 
-      // Agregar a favoritos
-      await Favorito.create({
-        usuario_id: usuarioId,
-        anuncio_id: id,
-        fecha: new Date()
-      }, { transaction: t });
+      // Crear nuevo favorito
+      const nuevoFavorito = await Favorito.create({ 
+        usuario_id: usuarioId, 
+        anuncio_id: anuncioId,
+        fecha_agregado: new Date()
+      });
 
-      res.status(201).json({ mensaje: 'Anuncio agregado a favoritos exitosamente' });
+      res.status(201).json({
+        mensaje: 'Anuncio añadido a favoritos',
+        favorito: {
+          id: nuevoFavorito.id,
+          anuncio_id: nuevoFavorito.anuncio_id,
+          usuario_id: nuevoFavorito.usuario_id,
+          fecha_agregado: nuevoFavorito.fecha_agregado
+        }
+      });
     } catch (error) {
       console.error('Error al agregar favorito:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      res.status(500).json({ error: 'Error al agregar el anuncio a favoritos' });
     }
   },
 
-  // Eliminar favorito
+  // Eliminar un favorito
   eliminarFavorito: async (req, res) => {
     try {
       const { id } = req.params;
-      const usuarioId = req.user.id;
+      const { id: usuarioId } = req.usuario;
+      
+      console.log(`Eliminando favorito ${id} del usuario ${usuarioId}`);
 
+      // Buscar el favorito
       const favorito = await Favorito.findOne({
-        where: {
-          usuario_id: usuarioId,
-          anuncio_id: id
-        },
-        transaction: t
+        where: { 
+          id,
+          usuario_id: usuarioId 
+        }
       });
 
       if (!favorito) {
         return res.status(404).json({ error: 'Favorito no encontrado' });
       }
 
-      await favorito.destroy({ transaction: t });
+      // Eliminar el favorito
+      await favorito.destroy();
       
-      res.json({ mensaje: 'Favorito eliminado exitosamente' });
+      res.json({ mensaje: 'Favorito eliminado correctamente' });
     } catch (error) {
       console.error('Error al eliminar favorito:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      res.status(500).json({ error: 'Error al eliminar el favorito' });
+    }
+  },
+  
+  // Eliminar un favorito por ID de anuncio
+  eliminarFavoritoPorAnuncio: async (req, res) => {
+    try {
+      const { anuncioId } = req.params;
+      const { id: usuarioId } = req.usuario;
+      
+      console.log(`Eliminando favorito del anuncio ${anuncioId} para el usuario ${usuarioId}`);
+
+      // Buscar el favorito por anuncio_id
+      const favorito = await Favorito.findOne({
+        where: { 
+          anuncio_id: anuncioId,
+          usuario_id: usuarioId 
+        }
+      });
+
+      if (!favorito) {
+        return res.status(404).json({ error: 'Favorito no encontrado' });
+      }
+
+      // Eliminar el favorito
+      await favorito.destroy();
+      
+      res.json({ mensaje: 'Favorito eliminado correctamente' });
+    } catch (error) {
+      console.error('Error al eliminar favorito por anuncio:', error);
+      res.status(500).json({ error: 'Error al eliminar el favorito' });
     }
   },
 
-  // Listar todos los favoritos del usuario
+  // Listar favoritos de un usuario específico
   listarFavoritos: async (req, res) => {
     try {
-      const { limit = 10, offset = 0 } = req.query;
-
-      const favoritos = await Favorito.findAndCountAll({
-        where: { usuario_id: req.user.id },
+      const { id } = req.params;
+      const { id: usuarioSolicitante } = req.usuario;
+      
+      console.log('Solicitud de favoritos recibida:');
+      console.log('ID solicitado:', id);
+      console.log('Usuario solicitante:', usuarioSolicitante);
+      
+      // Verificar permisos
+      if (parseInt(id) !== usuarioSolicitante && req.usuario.rol !== 'admin') {
+        console.log('Acceso denegado: El usuario no tiene permisos');
+        return res.status(403).json({ error: 'No tienes permiso para ver estos favoritos' });
+      }
+  
+      console.log('Buscando favoritos para el usuario:', id);
+      
+      // Obtener favoritos con información del anuncio y relaciones correctas para obtener marca y modelo
+      const favoritos = await Favorito.findAll({
+        where: { usuario_id: id },
         include: [{
           model: Anuncio,
+          as: 'anuncio',
+          attributes: ['id', 'titulo', 'precio', 'imagen_principal'],
           include: [{
             model: Vehiculo,
-            attributes: ['matricula', 'modelo_id', 'estado_vehiculo', 'anio', 'kilometros']
-          }, {
-            model: Usuario,
-            as: 'vendedor',
-            attributes: ['id', 'nombre', 'foto']
+            as: 'vehiculo',
+            attributes: ['matricula', 'anio', 'kilometros', 'combustible'],
+            include: [{
+              model: Modelo,
+              as: 'Modelo', // Cambiado de 'modelo' a 'Modelo' para que coincida con la asociación
+              attributes: ['nombre'],
+              include: [{
+                model: Marca,
+                attributes: ['nombre']
+              }]
+            }]
           }]
         }],
-        order: [['fecha', 'DESC']],
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        order: [['fecha_agregado', 'DESC']]
+      });
+  
+      console.log('Favoritos encontrados:', favoritos.length);
+      
+      // Formatear la respuesta para que coincida con lo que espera el frontend
+      const favoritosFormateados = favoritos.map(favorito => {
+        const anuncio = favorito.anuncio;
+        const vehiculo = anuncio.vehiculo || {};
+        const modelo = vehiculo.modelo || {};
+        const marca = modelo.marca || {};
+        
+        return {
+          id: favorito.id,
+          anuncio_id: anuncio.id,
+          usuario_id: favorito.usuario_id,
+          fecha_agregado: favorito.fecha_agregado,
+          anuncio: {
+            id: anuncio.id,
+            titulo: anuncio.titulo,
+            precio: anuncio.precio,
+            marca: marca.nombre || '',
+            modelo: modelo.nombre || '',
+            anio: vehiculo.anio || 0,
+            kilometros: vehiculo.kilometros || 0,
+            combustible: vehiculo.combustible || '',
+            imagen_principal: anuncio.imagen_principal
+          }
+        };
+      });
+  
+      console.log('Respuesta formateada lista para enviar');
+      res.json(favoritosFormateados);
+    } catch (error) {
+      console.error('Error en listarFavoritos:', error);
+      console.error('Stack trace:', error.stack);
+      res.status(500).json({ error: 'Error al obtener la lista de favoritos' });
+    }
+  },
+
+  // Verificar si un anuncio es favorito del usuario
+  esFavorito: async (req, res) => {
+    try {
+      const { anuncioId } = req.params;
+      const { id: usuarioId } = req.usuario;
+
+      const favorito = await Favorito.findOne({
+        where: { 
+          usuario_id: usuarioId, 
+          anuncio_id: anuncioId 
+        }
       });
 
-      res.json({
-        total: favoritos.count,
-        favoritos: favoritos.rows.map(f => f.Anuncio)
+      res.json({ 
+        esFavorito: !!favorito,
+        favorito: favorito ? {
+          id: favorito.id,
+          anuncio_id: favorito.anuncio_id,
+          usuario_id: favorito.usuario_id
+        } : null
       });
     } catch (error) {
-      console.error('Error al listar favoritos:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('Error al verificar favorito:', error);
+      res.status(500).json({ error: 'Error al verificar si el anuncio es favorito' });
     }
   }
 };

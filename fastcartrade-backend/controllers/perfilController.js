@@ -1,23 +1,21 @@
-// controllers/perfilController.js
-const { Op } = require('sequelize');
-const { sequelize } = require('../config/database');
 const Usuario = require('../model/Usuario');
-const bcrypt = require('bcryptjs');
-const Anuncio = require('../model/Anuncio');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = process.env;
 
 module.exports = {
-  // Ver el perfil del usuario logueado
-  verPerfil: async (req, res) => {
+  // Obtener perfil completo del usuario
+  obtenerPerfilCompleto: async (req, res) => {
     try {
-      const usuario = await Usuario.findByPk(req.user.id, {
-        attributes: { exclude: ['password'] },
-        include: [{
-          model: Anuncio,
-          as: 'anuncios',
-          attributes: ['id', 'titulo', 'precio', 'estado', 'fecha_publicacion'],
-          where: { estado: 'activo' },
-          required: false
-        }]
+      const { id } = req.params;
+      const { id: usuarioSolicitante } = req.usuario;
+
+      // Verificar permisos (solo el propio usuario o un admin pueden ver el perfil completo)
+      if (parseInt(id) !== usuarioSolicitante && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No tienes permiso para ver este perfil' });
+      }
+
+      const usuario = await Usuario.findByPk(id, {
+        attributes: ['id', 'nombre', 'correo', 'rol', 'foto', 'telefono', 'fecha_registro']
       });
 
       if (!usuario) {
@@ -26,106 +24,156 @@ module.exports = {
 
       res.json(usuario);
     } catch (error) {
-      console.error('Error al obtener perfil:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('Error al obtener perfil completo:', error);
+      res.status(500).json({ error: 'Error al obtener el perfil completo del usuario' });
     }
   },
 
-  // Cambiar foto de perfil
-  cambiarFoto: async (req, res) => {
+  // Actualizar foto de perfil
+  actualizarFotoPerfil: async (req, res) => {
     try {
+      const { id } = req.params;
       const { foto } = req.body;
+      const { id: usuarioSolicitante } = req.usuario;
 
-      if (!foto) {
-        return res.status(400).json({ error: 'Se requiere una foto' });
+      // Verificar permisos
+      if (parseInt(id) !== usuarioSolicitante && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No tienes permiso para modificar este perfil' });
       }
 
-      const usuario = await Usuario.findByPk(req.user.id, { transaction: t });
+      const usuario = await Usuario.findByPk(id);
+
       if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      await usuario.update( foto );
-      
-      res.json({ mensaje: 'Foto de perfil actualizada exitosamente' });
+      // Actualizar foto
+      usuario.foto = foto;
+      await usuario.save();
+
+      res.json({
+        mensaje: 'Foto de perfil actualizada correctamente',
+        foto: usuario.foto
+      });
     } catch (error) {
-      console.error('Error al cambiar foto de perfil:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('Error al actualizar foto de perfil:', error);
+      res.status(500).json({ error: 'Error al actualizar la foto de perfil' });
     }
   },
 
-  // Cambiar rol (ej: de comprador a vendedor)
-  cambiarRol: async (req, res) => {
+  // Actualizar información de contacto
+  actualizarContacto: async (req, res) => {
     try {
-      const { rol } = req.body;
+      const { id } = req.params;
+      const { telefono } = req.body;
+      const { id: usuarioSolicitante } = req.usuario;
 
-      if (!rol || !['comprador', 'vendedor'].includes(rol)) {
-        return res.status(400).json({ error: 'Rol inválido' });
+      // Verificar permisos
+      if (parseInt(id) !== usuarioSolicitante && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No tienes permiso para modificar este perfil' });
       }
 
-      const usuario = await Usuario.findByPk(req.user.id, { transaction: t });
+      const usuario = await Usuario.findByPk(id);
+
       if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      await usuario.update({ rol }, { transaction: t });
-      
-      res.json({ mensaje: 'Rol actualizado exitosamente' });
+      // Actualizar teléfono
+      if (telefono) usuario.telefono = telefono;
+      await usuario.save();
+
+      res.json({
+        mensaje: 'Información de contacto actualizada correctamente',
+        usuario: {
+          id: usuario.id,
+          nombre: usuario.nombre,
+          telefono: usuario.telefono
+        }
+      });
     } catch (error) {
-      console.error('Error al cambiar rol:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      console.error('Error al actualizar información de contacto:', error);
+      res.status(500).json({ error: 'Error al actualizar la información de contacto' });
     }
   },
 
+  // Actualizar perfil completo
   actualizarPerfil: async (req, res) => {
     try {
-      const { nombre, correo, password_actual, password_nueva } = req.body;
-      const usuario = await Usuario.findByPk(req.user.id, { transaction: t });
+      const { id } = req.params;
+      const { nombre, correo, telefono, foto } = req.body;
+      const { id: usuarioSolicitante } = req.usuario;
+
+      // Verificar permisos
+      if (parseInt(id) !== usuarioSolicitante && req.usuario.rol !== 'admin') {
+        return res.status(403).json({ error: 'No tienes permiso para modificar este perfil' });
+      }
+
+      const usuario = await Usuario.findByPk(id);
 
       if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      // Validar contraseña actual si se quiere cambiar la contraseña
-      if (password_nueva) {
-        if (!password_actual) {
-          return res.status(400).json({ error: 'Se requiere la contraseña actual' });
-        }
-
-        const esValida = await bcrypt.compare(password_actual, usuario.password);
-        if (!esValida) {
-          return res.status(400).json({ error: 'Contraseña actual incorrecta' });
-        }
-
-        // Hash de la nueva contraseña
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password_nueva, salt);
-        usuario.password = hashedPassword;
-      }
-
-      // Actualizar otros campos
+      // Actualizar datos
       if (nombre) usuario.nombre = nombre;
-      if (correo) {
-        // Verificar que el correo no está en uso
-        const correoExistente = await Usuario.findOne({
-          where: {
-            correo,
-            id: { [Op.ne]: usuario.id }
-          },
-          transaction: t
-        });
-
-        if (correoExistente) {
-          return res.status(400).json({ error: 'El correo ya está en uso' });
-        }
-        usuario.correo = correo;
-      }
-
+      if (correo) usuario.correo = correo;
+      if (telefono) usuario.telefono = telefono;
+      if (foto) usuario.foto = foto;
       
-      res.json({ mensaje: 'Perfil actualizado exitosamente' });
+      await usuario.save();
+
+      res.json({
+        mensaje: 'Perfil actualizado correctamente',
+        usuario: {
+          id: usuario.id,
+          nombre: usuario.nombre,
+          correo: usuario.correo,
+          telefono: usuario.telefono,
+          foto: usuario.foto,
+          rol: usuario.rol
+        }
+      });
     } catch (error) {
       console.error('Error al actualizar perfil:', error);
-      res.status(500).json({ error: 'Error interno del servidor' });
+      res.status(500).json({ error: 'Error al actualizar el perfil del usuario' });
+    }
+  },
+
+  // Cambiar contraseña
+  cambiarPassword: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { passwordActual, passwordNueva } = req.body;
+      const { id: usuarioSolicitante } = req.usuario;
+
+      // Verificar permisos
+      if (parseInt(id) !== usuarioSolicitante) {
+        return res.status(403).json({ error: 'No tienes permiso para cambiar la contraseña de este usuario' });
+      }
+
+      const usuario = await Usuario.findByPk(id);
+
+      if (!usuario) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+
+      // Verificar contraseña actual
+      const passwordValida = await usuario.validarPassword(passwordActual);
+      if (!passwordValida) {
+        return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+      }
+
+      // Actualizar contraseña
+      usuario.password = passwordNueva;
+      await usuario.save();
+
+      res.json({
+        mensaje: 'Contraseña actualizada correctamente'
+      });
+    } catch (error) {
+      console.error('Error al cambiar contraseña:', error);
+      res.status(500).json({ error: 'Error al cambiar la contraseña' });
     }
   }
 };
