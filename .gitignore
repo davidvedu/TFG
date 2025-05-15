@@ -6,7 +6,6 @@ server/coverage/
 
 # Angular
 cliente/node_modules/
-cliente/dist/
 cliente/.angular/cache/
 cliente/.env
 
